@@ -1,0 +1,64 @@
+// const baseURL = `${config.api.protocol}://${config.api.hostname}:${config.api.port}`;
+const baseURL = `https://mgp-backend-dev.5stages.de/`;
+
+
+bo admin
+
+
+
+
+
+NODE_ENV=dev
+
+# api
+BASIC_URL=http://localhost:3001
+FRONTEND_URL=http://localhost:3002
+USER_APP_URL=http://localhost:3000
+
+STATIC_URL=public/pass
+PORT=3001
+ENABLE_API=true
+
+# tokens/ security
+ACCESS_TOKEN_EXPIRES_IN=1h
+REFRESH_TOKEN_EXPIRES_IN=2h
+JWT_SECRET=mgpSecret
+DANGEROUSLY_DISABLE_AUTH_GUARD=false
+SALT_VALUE=10
+JWT_ACCESS_TOKEN_SECRET=your_secret_here
+JWT_REFRESH_TOKEN_SECRET=your_secret
+JWT_ACCESS_TOKEN_TTL=3600
+JWT_REFRESH_TOKEN_TTL=7200
+
+# Database Configuration
+DB_TYPE=postgres
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=198486
+POSTGRES_DATABASE=postgres
+
+# TypeORM Configuration
+TYPEORM_SYNC=true
+TYPEORM_LOGGING=true
+TYPEORM_EXECUTIONTIME=1000
+RUN_MIGRATIONS=false
+DROP_SCHEMA=false
+
+# nodemailer
+SENDER_MAIL=mgp-test@5stages.de
+SENDER=mgp-test@5stages.de
+SENDER_PASSWORD=TEjz5ks77r1n3E1P
+MAIL_HOST=mail.your-server.de
+MAIL_PORT=587
+
+# submission
+SUBMISSION_FUNDING_PHASE_MGP2025_DATE=2025-01-01
+
+# clamav:
+# AAA! run the container with: docker run -d --name clamav -p 3310:3310 clamav/clamav:latest
+# CLAM_AV_HOST=localhost
+
+# Bund ID
+BUND_ID_CLIENT_ID=5stages
+BUND_ID_CLIENT_SECRET=56pwap0is2gAzK0SGopRUxyyujgbKRjb
