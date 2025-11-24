@@ -555,3 +555,15 @@ app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   console.log(`Google Drive Folder ID: ${DRIVE_FOLDER_ID}`);
 });
+// Add this route to your server.ts
+app.get("/", (req, res) => {
+  res.json({
+    message: "Economic App Backend is running!",
+    endpoints: {
+      login: "POST /login",
+      upload: "POST /upload",
+      files: "GET /files",
+      delete: "DELETE /files/:id",
+    },
+  });
+});
