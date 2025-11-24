@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "start": "node dist/server.js",
-    "build": "echo 'No build needed for Netlify Functions'",
-    "dev": "node server.js"
+    "build": "tsc",
+    "dev": "nodemon src/server.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
