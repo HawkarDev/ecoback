@@ -9,11 +9,14 @@ const authenticateAdmin = (req, res, next) => {
     var _a;
     const token = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split(" ")[1]; // Get the token from the header
     if (!token) {
-        return res.status(401).json({ message: "Access denied. No token provided." });
+        return res
+            .status(401)
+            .json({ message: "Access denied. No token provided." });
     }
     try {
         // Verify the token
-        const decoded = jsonwebtoken_1.default.verify(token, "your-secret-key");
+        const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret";
+        const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
         req.user = decoded; // Attach the decoded user to the request object
         next();
     }
