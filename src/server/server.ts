@@ -214,8 +214,11 @@ app.post(
 // Add this BEFORE export default app
 
 app.get("/api/files", async (req, res) => {
+  console.log("=== /api/files ENDPOINT CALLED ===");
+  console.log("Current time:", new Date().toISOString());
+
   // TEMPORARY: Return just your uploaded file
-  res.status(200).json([
+  const responseData = [
     {
       id: "economic-files/1765827961503-debugpdffile.txt",
       name: "debugpdffile.txt",
@@ -226,7 +229,11 @@ app.get("/api/files", async (req, res) => {
         "https://eeap8astexqehuzi.public.blob.vercel-storage.com/economic-files/1765827961503-debugpdffile.txt",
       createdTime: new Date().toISOString(),
     },
-  ]);
+  ];
+
+  console.log("Returning data:", JSON.stringify(responseData, null, 2));
+
+  res.status(200).json(responseData);
 });
 
 app.get("/api/check-deployment", (req, res) => {
