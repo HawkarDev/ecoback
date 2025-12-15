@@ -116,9 +116,16 @@ app.get("/api/admin/profile", authenticateAdmin, (req, res) => {
 });
 
 app.get("/api/files", async (req, res) => {
-  // For now, return empty array
-  // You can implement Vercel Blob listing later
-  res.status(200).json([]);
+  res.status(200).json([
+    {
+      id: "test-file-123",
+      name: "test-upload.txt",
+      url: "https://example.com/test.txt",
+      type: "text/plain",
+      size: 1024,
+      createdTime: new Date().toISOString(),
+    },
+  ]);
 });
 
 // Test endpoint to verify blob token is working
