@@ -6,7 +6,7 @@ import cors from "cors";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { put } from "@vercel/blob";
+import { list, put } from "@vercel/blob";
 
 const app = express();
 
@@ -191,6 +191,7 @@ app.post(
         {
           access: "public",
           contentType: req.file.mimetype,
+          token: process.env.BLOB_READ_WRITE_TOKEN,
         }
       );
 
@@ -216,14 +217,40 @@ app.post(
   }
 );
 
-app.delete("/api/files/:id", authenticateAdmin, async (req, res) => {
-  // Note: Vercel Blob deletion requires a different approach
-  // For now, return success (implement proper deletion later)
-  res.status(200).json({ message: "File deleted successfully" });
-});
+// app.delete("/api/files/:id", authenticateAdmin, async (req, res) => {
+//   // Note: Vercel Blob deletion requires a different approach
+//   // For now, return success (implement proper deletion later)
+//   res.status(200).json({ message: "File deleted successfully" });
+// });
 
 // Export for Vercel
 // Add this BEFORE export default app
+
+app.get("/api/files", async (req, res) => {
+  try {
+    const { blobs } = await list({
+      prefix: "economic-files/",
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
+
+    // Basic mapping without complex type assumptions
+    const files = blobs.map((blob) => ({
+      id: blob.pathname,
+      name: blob.pathname.split("/").pop() || "file", // Get last part of path
+      url: blob.url,
+      type: "file", // Generic type for now
+      size: blob.size,
+      viewUrl: blob.url,
+      createdTime: blob.uploadedAt,
+    }));
+
+    res.status(200).json(files);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: "Failed to fetch files" });
+  }
+});
+
 app.get("/api/check-deployment", (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const hasToken = !!token;
