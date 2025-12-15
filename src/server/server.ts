@@ -214,26 +214,32 @@ app.post(
 // Add this BEFORE export default app
 
 app.get("/api/files", async (req, res) => {
-  console.log("=== /api/files ENDPOINT CALLED ===");
-  console.log("Current time:", new Date().toISOString());
+  try {
+    // 1. Get ALL real files from your Blob store
+    const { blobs } = await list({
+      prefix: "economic-files/", // This matches where your uploads go
+      token: process.env.BLOB_READ_WRITE_TOKEN,
+    });
 
-  // TEMPORARY: Return just your uploaded file
-  const responseData = [
-    {
-      id: "economic-files/1765827961503-debugpdffile.txt",
-      name: "debugpdffile.txt",
-      url: "https://eeap8astexqehuzi.public.blob.vercel-storage.com/economic-files/1765827961503-debugpdffile.txt",
-      type: "text/plain",
-      size: 18127,
-      viewUrl:
-        "https://eeap8astexqehuzi.public.blob.vercel-storage.com/economic-files/1765827961503-debugpdffile.txt",
-      createdTime: new Date().toISOString(),
-    },
-  ];
+    // 2. Format them for the frontend
+    const files = blobs.map((blob) => ({
+      id: blob.pathname,
+      // Clean up the name: remove folder and timestamp
+      name: blob.pathname.replace("economic-files/", "").replace(/^\d+-/, ""),
+      url: blob.url,
+      // Use a default type; Vercel's list() might not return contentType
+      type: "application/octet-stream",
+      size: blob.size,
+      viewUrl: blob.url,
+      createdTime: blob.uploadedAt,
+    }));
 
-  console.log("Returning data:", JSON.stringify(responseData, null, 2));
-
-  res.status(200).json(responseData);
+    // 3. Send the real list
+    res.status(200).json(files);
+  } catch (error) {
+    console.error("Error fetching files:", error);
+    res.status(500).json({ message: "Failed to fetch files" });
+  }
 });
 
 app.get("/api/check-deployment", (req, res) => {
