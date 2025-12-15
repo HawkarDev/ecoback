@@ -115,6 +115,19 @@ app.get("/api/admin/profile", authenticateAdmin, (req, res) => {
   });
 });
 
+app.get("/api/files", async (req, res) => {
+  res.status(200).json([
+    {
+      id: "test-file-123",
+      name: "test-upload.txt",
+      url: "https://example.com/test.txt",
+      type: "text/plain",
+      size: 1024,
+      createdTime: new Date().toISOString(),
+    },
+  ]);
+});
+
 // Test endpoint to verify blob token is working
 app.get("/api/verify-blob-token", (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
@@ -212,36 +225,44 @@ app.post(
 
 // Export for Vercel
 // Add this BEFORE export default app
-
 app.get("/api/files", async (req, res) => {
   try {
-    // 1. Get ALL real files from your Blob store
+    // Helper function INSIDE the endpoint
+    const getFileTypeFromName = (filename: string): string => {
+      const ext = filename.toLowerCase();
+      if (ext.endsWith(".txt")) return "text/plain";
+      if (ext.endsWith(".pdf")) return "application/pdf";
+      if (ext.endsWith(".doc")) return "application/msword";
+      if (ext.endsWith(".docx"))
+        return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      if (ext.endsWith(".mp4") || ext.endsWith(".mov")) return "video/mp4";
+      if (ext.endsWith(".mp3") || ext.endsWith(".wav")) return "audio/mpeg";
+      if (ext.endsWith(".jpg") || ext.endsWith(".jpeg")) return "image/jpeg";
+      if (ext.endsWith(".png")) return "image/png";
+      return "application/octet-stream";
+    };
+
     const { blobs } = await list({
-      prefix: "economic-files/", // This matches where your uploads go
+      prefix: "economic-files/",
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    // 2. Format them for the frontend
     const files = blobs.map((blob) => ({
       id: blob.pathname,
-      // Clean up the name: remove folder and timestamp
       name: blob.pathname.replace("economic-files/", "").replace(/^\d+-/, ""),
       url: blob.url,
-      // Use a default type; Vercel's list() might not return contentType
-      type: "application/octet-stream",
+      type: getFileTypeFromName(blob.pathname),
       size: blob.size,
       viewUrl: blob.url,
       createdTime: blob.uploadedAt,
     }));
 
-    // 3. Send the real list
     res.status(200).json(files);
   } catch (error) {
-    console.error("Error fetching files:", error);
+    console.error("❌ Error fetching files:", error);
     res.status(500).json({ message: "Failed to fetch files" });
   }
 });
-
 app.get("/api/check-deployment", (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
   const hasToken = !!token;
