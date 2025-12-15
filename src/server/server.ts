@@ -1,5 +1,5 @@
 // // Export for Vercel
-// export default app;
+
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
