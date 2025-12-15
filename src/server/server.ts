@@ -216,4 +216,29 @@ app.delete("/api/files/:id", authenticateAdmin, async (req, res) => {
 });
 
 // Export for Vercel
+// Add this BEFORE export default app
+app.get("/api/check-deployment", (req, res) => {
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  const hasToken = !!token;
+  const isCorrectFormat = hasToken && token.startsWith("vercel_blob_rw_");
+
+  res.json({
+    timestamp: new Date().toISOString(),
+    deployment: "latest",
+    blobTokenExists: hasToken,
+    isCorrectFormat: isCorrectFormat,
+    tokenLength: hasToken ? token.length : 0,
+    tokenPreview: hasToken ? `${token.substring(0, 20)}...` : "none",
+    status: hasToken
+      ? isCorrectFormat
+        ? "✅ READY"
+        : "❌ WRONG FORMAT"
+      : "❌ MISSING",
+    note: isCorrectFormat
+      ? "Uploads should work now!"
+      : hasToken
+      ? "Token doesn't start with 'vercel_blob_rw_'"
+      : "No token found",
+  });
+});
 export default app;
