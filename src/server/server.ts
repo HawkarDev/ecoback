@@ -115,19 +115,6 @@ app.get("/api/admin/profile", authenticateAdmin, (req, res) => {
   });
 });
 
-app.get("/api/files", async (req, res) => {
-  res.status(200).json([
-    {
-      id: "test-file-123",
-      name: "test-upload.txt",
-      url: "https://example.com/test.txt",
-      type: "text/plain",
-      size: 1024,
-      createdTime: new Date().toISOString(),
-    },
-  ]);
-});
-
 // Test endpoint to verify blob token is working
 app.get("/api/verify-blob-token", (req, res) => {
   const token = process.env.BLOB_READ_WRITE_TOKEN;
