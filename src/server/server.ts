@@ -274,4 +274,16 @@ app.get("/api/check-deployment", (req, res) => {
       : "No token found",
   });
 });
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running locally on http://localhost:${PORT}`);
+  console.log(`📁 API available at http://localhost:${PORT}/api/files`);
+  console.log(`🔑 Admin login at http://localhost:${PORT}/api/admin/login`);
+});
+
+// for local testing
+// app.listen(3000, () =>
+//   console.log("✅ Server running on http://localhost:3000")
+// );
 export default app;

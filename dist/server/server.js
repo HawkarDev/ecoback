@@ -1,4 +1,5 @@
 "use strict";
+// // Export for Vercel
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -9,20 +10,15 @@ const cors_1 = __importDefault(require("cors"));
 const multer_1 = __importDefault(require("multer"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const googleapis_1 = require("googleapis");
-const stream_1 = require("stream");
+const blob_1 = require("@vercel/blob");
 const app = (0, express_1.default)();
 // Middleware
-// ======== CORS CONFIGURATION ========
-// Enable CORS for all routes
-// Simple CORS - allow all origins (quick fix)
 app.use((0, cors_1.default)({
-    origin: "*", // Allow ALL origins temporarily
+    origin: "*",
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
 }));
-// Handle preflight requests explicitly
 app.options("*", (req, res) => {
     res.header("Access-Control-Allow-Origin", req.headers.origin);
     res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
@@ -32,29 +28,10 @@ app.options("*", (req, res) => {
 });
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: true }));
-// ======== GOOGLE DRIVE CONFIGURATION ========
-const authenticateGoogleDrive = () => {
-    try {
-        const credentials = process.env.GOOGLE_SERVICE_ACCOUNT;
-        if (!credentials) {
-            throw new Error("Google service account credentials not found");
-        }
-        const auth = new googleapis_1.google.auth.GoogleAuth({
-            credentials: JSON.parse(credentials),
-            scopes: ["https://www.googleapis.com/auth/drive.file"],
-        });
-        return googleapis_1.google.drive({ version: "v3", auth });
-    }
-    catch (error) {
-        console.error("Google Drive authentication failed:", error);
-        throw error;
-    }
-};
-const DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
-const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
-// In-memory storage for Vercel
+// Multer for file handling
 const storage = multer_1.default.memoryStorage();
 const upload = (0, multer_1.default)({ storage });
+const JWT_SECRET = process.env.JWT_SECRET || "your-secret-key";
 // Admin credentials
 const admin = {
     username: process.env.ADMIN_USERNAME || "admin",
@@ -81,7 +58,7 @@ const authenticateAdmin = (req, res, next) => {
 // ======== ROUTES ========
 app.get("/", (req, res) => {
     res.json({
-        message: "Economic App Backend is running on Vercel! 🚀",
+        message: "Economic App Backend is running on Vercel with Blob Storage! 🚀",
         status: "OK",
         timestamp: new Date().toISOString(),
     });
@@ -122,76 +99,66 @@ app.get("/api/admin/profile", authenticateAdmin, (req, res) => {
         timestamp: new Date().toISOString(),
     });
 });
-app.get("/api/files", async (req, res) => {
-    var _a;
-    try {
-        const drive = authenticateGoogleDrive();
-        const response = await drive.files.list({
-            q: `'${DRIVE_FOLDER_ID}' in parents and trashed = false`,
-            fields: "files(id, name, mimeType, webViewLink, createdTime, size)",
-            orderBy: "createdTime desc",
-        });
-        const files = ((_a = response.data.files) === null || _a === void 0 ? void 0 : _a.map((file) => ({
-            id: file.id,
-            name: file.name,
-            type: file.mimeType,
-            url: `https://drive.google.com/uc?export=download&id=${file.id}`,
-            viewUrl: file.webViewLink,
-            createdTime: file.createdTime,
-            size: file.size,
-        }))) || [];
-        res.status(200).json(files);
+// Test endpoint to verify blob token is working
+app.get("/api/verify-blob-token", (req, res) => {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const isConfigured = !!token;
+    // Security: Only show first few chars
+    let tokenPreview = "NOT SET";
+    if (isConfigured) {
+        tokenPreview = `${token.substring(0, 10)}...${token.substring(token.length - 5)}`;
     }
-    catch (error) {
-        console.error("Error fetching files:", error);
-        res
-            .status(500)
-            .json({ message: "Failed to fetch files from Google Drive" });
-    }
+    res.json({
+        timestamp: new Date().toISOString(),
+        backend: "economic-backend-new.vercel.app",
+        blobTokenConfigured: isConfigured,
+        tokenPreview: tokenPreview,
+        tokenLength: isConfigured ? token.length : 0,
+        environment: process.env.NODE_ENV || "production",
+        status: isConfigured
+            ? "✅ READY FOR UPLOADS"
+            : "❌ TOKEN MISSING - REDEPLOY NEEDED",
+        // Helpful instructions if token is missing
+        instructions: !isConfigured
+            ? [
+                "1. Check Vercel Dashboard → Settings → Environment Variables",
+                "2. Look for BLOB_READ_WRITE_TOKEN in Production column",
+                "3. If missing, add it and REDEPLOY",
+                "4. Token should start with: vercel_blob_rw_",
+            ]
+            : [
+                "✅ Token is configured!",
+                "Next: Test upload with curl command below",
+            ],
+        // Example curl command if token exists
+        testCommand: isConfigured
+            ? "curl -X POST https://economic-backend-new.vercel.app/api/upload \\\n" +
+                "  -H 'Authorization: Bearer YOUR_JWT_TOKEN' \\\n" +
+                "  -F 'file=@test.jpg'"
+            : "First configure the token, then test",
+    });
 });
-// WORKING FILE UPLOAD ENDPOINT
+// VERCELL BLOB UPLOAD ENDPOINT
 app.post("/api/upload", authenticateAdmin, upload.single("file"), async (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
     }
     try {
-        const drive = authenticateGoogleDrive();
-        console.log("📤 Uploading file:", req.file.originalname);
-        // Convert buffer to stream
-        const bufferStream = new stream_1.Readable();
-        bufferStream.push(req.file.buffer);
-        bufferStream.push(null);
-        // Upload to Google Drive
-        const response = await drive.files.create({
-            requestBody: {
-                name: `${Date.now()}-${req.file.originalname}`,
-                parents: [DRIVE_FOLDER_ID],
-            },
-            media: {
-                mimeType: req.file.mimetype,
-                body: bufferStream,
-            },
-            fields: "id,name,webViewLink,mimeType",
+        // Upload to Vercel Blob
+        const blob = await (0, blob_1.put)(`economic-files/${Date.now()}-${req.file.originalname}`, req.file.buffer, {
+            access: "public",
+            contentType: req.file.mimetype,
+            token: process.env.BLOB_READ_WRITE_TOKEN,
         });
-        console.log("✅ File uploaded to Google Drive:", response.data.name);
-        // Make file publicly accessible
-        await drive.permissions.create({
-            fileId: response.data.id,
-            requestBody: {
-                role: "reader",
-                type: "anyone",
-            },
-        });
-        const downloadUrl = `https://drive.google.com/uc?export=download&id=${response.data.id}`;
+        console.log("✅ File uploaded to Vercel Blob:", req.file.originalname);
         res.status(200).json({
-            message: "File uploaded successfully to Google Drive!",
+            message: "File uploaded successfully to Vercel Blob!",
             file: {
-                id: response.data.id,
-                name: response.data.name,
-                url: downloadUrl,
-                viewUrl: response.data.webViewLink,
-                type: response.data.mimeType || req.file.mimetype,
-                size: `${(req.file.size / 1024 / 1024).toFixed(2)} MB`,
+                id: blob.pathname,
+                name: req.file.originalname,
+                url: blob.url,
+                type: req.file.mimetype,
+                size: req.file.size,
             },
         });
     }
@@ -203,17 +170,85 @@ app.post("/api/upload", authenticateAdmin, upload.single("file"), async (req, re
         });
     }
 });
-app.delete("/api/files/:id", authenticateAdmin, async (req, res) => {
-    const fileId = req.params.id;
+// app.delete("/api/files/:id", authenticateAdmin, async (req, res) => {
+//   // Note: Vercel Blob deletion requires a different approach
+//   // For now, return success (implement proper deletion later)
+//   res.status(200).json({ message: "File deleted successfully" });
+// });
+// Export for Vercel
+// Add this BEFORE export default app
+app.get("/api/files", async (req, res) => {
     try {
-        const drive = authenticateGoogleDrive();
-        await drive.files.delete({ fileId });
-        res.status(200).json({ message: "File deleted successfully" });
+        // Helper function INSIDE the endpoint
+        const getFileTypeFromName = (filename) => {
+            const ext = filename.toLowerCase();
+            if (ext.endsWith(".txt"))
+                return "text/plain";
+            if (ext.endsWith(".pdf"))
+                return "application/pdf";
+            if (ext.endsWith(".doc"))
+                return "application/msword";
+            if (ext.endsWith(".docx"))
+                return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            if (ext.endsWith(".mp4") || ext.endsWith(".mov"))
+                return "video/mp4";
+            if (ext.endsWith(".mp3") || ext.endsWith(".wav"))
+                return "audio/mpeg";
+            if (ext.endsWith(".jpg") || ext.endsWith(".jpeg"))
+                return "image/jpeg";
+            if (ext.endsWith(".png"))
+                return "image/png";
+            return "application/octet-stream";
+        };
+        const { blobs } = await (0, blob_1.list)({
+            prefix: "economic-files/",
+            token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        const files = blobs.map((blob) => ({
+            id: blob.pathname,
+            name: blob.pathname.replace("economic-files/", "").replace(/^\d+-/, ""),
+            url: blob.url,
+            type: getFileTypeFromName(blob.pathname),
+            size: blob.size,
+            viewUrl: blob.url,
+            createdTime: blob.uploadedAt,
+        }));
+        res.status(200).json(files);
     }
-    catch (err) {
-        console.error("Error deleting file:", err);
-        res.status(500).json({ message: "Failed to delete file" });
+    catch (error) {
+        console.error("❌ Error fetching files:", error);
+        res.status(500).json({ message: "Failed to fetch files" });
     }
 });
-// Export for Vercel
+app.get("/api/check-deployment", (req, res) => {
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    const hasToken = !!token;
+    const isCorrectFormat = hasToken && token.startsWith("vercel_blob_rw_");
+    res.json({
+        timestamp: new Date().toISOString(),
+        deployment: "latest",
+        blobTokenExists: hasToken,
+        isCorrectFormat: isCorrectFormat,
+        tokenLength: hasToken ? token.length : 0,
+        tokenPreview: hasToken ? `${token.substring(0, 20)}...` : "none",
+        status: hasToken
+            ? isCorrectFormat
+                ? "✅ READY"
+                : "❌ WRONG FORMAT"
+            : "❌ MISSING",
+        note: isCorrectFormat
+            ? "Uploads should work now!"
+            : hasToken
+                ? "Token doesn't start with 'vercel_blob_rw_'"
+                : "No token found",
+    });
+    if (process.env.NODE_ENV !== "production") {
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () => {
+            console.log(`🚀 Server running locally on http://localhost:${PORT}`);
+            console.log(`📁 API available at http://localhost:${PORT}/api/files`);
+            console.log(`🔑 Admin login at http://localhost:${PORT}/api/admin/login`);
+        });
+    }
+});
 exports.default = app;
