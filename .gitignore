@@ -1,3 +1,6 @@
 .vercel
 .env*.local
-.service-account-key.json
+.service-account-key.jsonservice-account-key.json
+uploads/
+*.json
+.env
