@@ -227,44 +227,19 @@ app.post(
 // Add this BEFORE export default app
 
 app.get("/api/files", async (req, res) => {
-  try {
-    // 1. Fetch REAL files from Vercel Blob
-    const { blobs } = await list({
-      prefix: "economic-files/", // Matches your upload folder
-      token: process.env.BLOB_READ_WRITE_TOKEN,
-    });
-
-    // 2. Format EXACTLY like your upload response
-    const files = blobs.map((blob) => {
-      // Extract filename from pathname (e.g., "economic-files/1765827961503-debugpdffile.txt")
-      const pathname = blob.pathname;
-      const filename = pathname.includes("/")
-        ? pathname.split("/").pop()
-        : pathname;
-
-      // Remove timestamp prefix if present (e.g., "1765827961503-")
-      const cleanName = filename ? filename.replace(/^\d+-/, "") : "file";
-
-      return {
-        id: pathname, // e.g., "economic-files/1765827961503-debugpdffile.txt"
-        name: cleanName, // e.g., "debugpdffile.txt"
-        url: blob.url, // e.g., "https://eeap8astexqehuzi.public.blob.vercel-storage.com/..."
-        type: "text/plain", // You'll need to detect this properly later
-        size: blob.size,
-        viewUrl: blob.url,
-        createdTime: blob.uploadedAt,
-      };
-    });
-
-    // 3. Return REAL files
-    res.status(200).json(files);
-  } catch (error) {
-    console.error("❌ Error fetching files:", error);
-    res.status(500).json({
-      message: "Failed to fetch files",
-      error: (error as Error).message,
-    });
-  }
+  // TEMPORARY: Return just your uploaded file
+  res.status(200).json([
+    {
+      id: "economic-files/1765827961503-debugpdffile.txt",
+      name: "debugpdffile.txt",
+      url: "https://eeap8astexqehuzi.public.blob.vercel-storage.com/economic-files/1765827961503-debugpdffile.txt",
+      type: "text/plain",
+      size: 18127,
+      viewUrl:
+        "https://eeap8astexqehuzi.public.blob.vercel-storage.com/economic-files/1765827961503-debugpdffile.txt",
+      createdTime: new Date().toISOString(),
+    },
+  ]);
 });
 
 app.get("/api/check-deployment", (req, res) => {
